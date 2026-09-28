@@ -58,9 +58,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install argocd CLI
         run: |
-          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
-          echo "5a10d1ebc4b903c9cb56279f66ec983134c87c252d9a9d2596dde9867359ef67  argocd" | sha256sum -c -
-          sudo install -m 555 argocd /usr/local/bin/argocd
+          curl -sSL -o "$RUNNER_TEMP/argocd" https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
+          echo "5a10d1ebc4b903c9cb56279f66ec983134c87c252d9a9d2596dde9867359ef67  $RUNNER_TEMP/argocd" | sha256sum -c -
+          sudo install -m 555 "$RUNNER_TEMP/argocd" /usr/local/bin/argocd
       - name: Promote
         env:
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
@@ -81,9 +81,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install argocd CLI
         run: |
-          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
-          echo "5a10d1ebc4b903c9cb56279f66ec983134c87c252d9a9d2596dde9867359ef67  argocd" | sha256sum -c -
-          sudo install -m 555 argocd /usr/local/bin/argocd
+          curl -sSL -o "$RUNNER_TEMP/argocd" https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
+          echo "5a10d1ebc4b903c9cb56279f66ec983134c87c252d9a9d2596dde9867359ef67  $RUNNER_TEMP/argocd" | sha256sum -c -
+          sudo install -m 555 "$RUNNER_TEMP/argocd" /usr/local/bin/argocd
       - name: Promote
         env:
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
