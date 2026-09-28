@@ -1,6 +1,6 @@
 # demo-helm: build → test → package-chart → promote-staging → promote-prod, on main.
 # Secrets: REGISTRY_TOKEN (GHCR push), ARGOCD_TOKEN. Variables: ARGOCD_SERVER.
-# --insecure: the staging ArgoCD serves a self-signed certificate (sandbox only).
+# The staging ArgoCD uses a self-signed certificate; the CLI pins it (argocd/server.crt).
 # The prod environment is protected; promote-prod waits for its approval.
 name: deploy
 
@@ -59,6 +59,7 @@ jobs:
       - name: Install argocd CLI
         run: |
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
+          echo "5a10d1ebc4b903c9cb56279f66ec983134c87c252d9a9d2596dde9867359ef67  argocd" | sha256sum -c -
           sudo install -m 555 argocd /usr/local/bin/argocd
       - name: Promote
         env:
@@ -68,9 +69,9 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
         run: |
           CHART_VERSION=$(grep '^version:' helm/Chart.yaml | awk '{print $2}')
-          argocd app set "$APP" --revision "$CHART_VERSION" --helm-set image.tag="$TAG" --grpc-web --insecure
-          argocd app sync "$APP" --grpc-web --insecure
-          argocd app wait "$APP" --health --sync --timeout 300 --grpc-web --insecure
+          argocd app set "$APP" --revision "$CHART_VERSION" --helm-set image.tag="$TAG" --grpc-web --server-crt argocd/server.crt
+          argocd app sync "$APP" --grpc-web --server-crt argocd/server.crt
+          argocd app wait "$APP" --health --sync --timeout 300 --grpc-web --server-crt argocd/server.crt
 
   promote-prod:
     needs: [build, promote-staging]
@@ -81,6 +82,7 @@ jobs:
       - name: Install argocd CLI
         run: |
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
+          echo "5a10d1ebc4b903c9cb56279f66ec983134c87c252d9a9d2596dde9867359ef67  argocd" | sha256sum -c -
           sudo install -m 555 argocd /usr/local/bin/argocd
       - name: Promote
         env:
@@ -90,7 +92,7 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
         run: |
           CHART_VERSION=$(grep '^version:' helm/Chart.yaml | awk '{print $2}')
-          argocd app set "$APP" --revision "$CHART_VERSION" --helm-set image.tag="$TAG" --grpc-web --insecure
-          argocd app sync "$APP" --grpc-web --insecure
-          argocd app wait "$APP" --health --sync --timeout 300 --grpc-web --insecure
+          argocd app set "$APP" --revision "$CHART_VERSION" --helm-set image.tag="$TAG" --grpc-web --server-crt argocd/server.crt
+          argocd app sync "$APP" --grpc-web --server-crt argocd/server.crt
+          argocd app wait "$APP" --health --sync --timeout 300 --grpc-web --server-crt argocd/server.crt
 
