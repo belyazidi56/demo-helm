@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-helm-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # the chart CI pushes to GHCR (OCI); the promote job sets targetRevision and image.tag
+    repoURL: ghcr.io/OWNER/charts
+    chart: demo-helm
+    targetRevision: 0.1.0
+    helm:
+      releaseName: demo-helm
+      valueFiles:
+        - values-staging.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo-staging
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

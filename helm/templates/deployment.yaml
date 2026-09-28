@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "demo.fullname" . }}
+  labels: {{- include "demo.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels: {{- include "demo.labels" . | nindent 8 }}
+    spec:
+      imagePullSecrets: {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "demo.fullname" . }}-db
+                  key: DB_URL
+          # no readinessProbe: a planted weak point for the consultant (docs/sandboxes.md)
+          resources: {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,95 @@
+# demo-helm: build → test → package-chart → promote-staging → promote-prod, on main.
+# Secrets: REGISTRY_TOKEN (GHCR push), ARGOCD_TOKEN. Variables: ARGOCD_SERVER.
+# The prod environment is protected; promote-prod waits for its approval.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/demo-helm
+  CHART_REPO: oci://ghcr.io/${{ github.repository_owner }}/charts
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - run: docker build --build-arg COMMIT=${{ steps.tag.outputs.tag }} -t "$IMAGE:${{ steps.tag.outputs.tag }}" .
+      - run: docker push "$IMAGE:${{ steps.tag.outputs.tag }}"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci && npm run build && npm test
+
+  package-chart:
+    needs: [build, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: helm lint helm -f helm/values-staging.yaml
+      - run: echo "${{ secrets.REGISTRY_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - run: helm package helm && helm push demo-helm-*.tgz "$CHART_REPO"
+
+  promote-staging:
+    needs: [build, package-chart]
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install argocd CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
+          sudo install -m 555 argocd /usr/local/bin/argocd
+      - name: Promote
+        env:
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
+          ARGOCD_SERVER: ${{ vars.ARGOCD_SERVER }}
+          APP: demo-helm-staging
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          CHART_VERSION=$(grep '^version:' helm/Chart.yaml | awk '{print $2}')
+          argocd app set "$APP" --revision "$CHART_VERSION" --helm-set image.tag="$TAG" --grpc-web
+          argocd app sync "$APP" --grpc-web
+          argocd app wait "$APP" --health --sync --timeout 300 --grpc-web
+
+  promote-prod:
+    needs: [build, promote-staging]
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install argocd CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/download/v2.13.2/argocd-linux-amd64
+          sudo install -m 555 argocd /usr/local/bin/argocd
+      - name: Promote
+        env:
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
+          ARGOCD_SERVER: ${{ vars.ARGOCD_SERVER }}
+          APP: demo-helm-prod
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          CHART_VERSION=$(grep '^version:' helm/Chart.yaml | awk '{print $2}')
+          argocd app set "$APP" --revision "$CHART_VERSION" --helm-set image.tag="$TAG" --grpc-web
+          argocd app sync "$APP" --grpc-web
+          argocd app wait "$APP" --health --sync --timeout 300 --grpc-web
+

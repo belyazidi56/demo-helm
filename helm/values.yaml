@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/OWNER/demo-helm
+  tag: ""            # set per promotion: the commit's short SHA
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull   # created by the ExternalSecret below, never inline
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Secrets come from the cluster's external secrets store (External Secrets Operator).
+# Only the store and key names live here — never values.
+externalSecrets:
+  store: valatrix-sandbox-store
+  dbUrlKey: demo-helm/staging/DB_URL
+  pullSecretKey: demo-helm/ghcr-pull
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { cpu: 250m, memory: 128Mi }
