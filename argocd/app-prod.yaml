@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     # the chart CI pushes to GHCR (OCI); the promote job sets targetRevision and image.tag
-    repoURL: ghcr.io/OWNER/charts
+    repoURL: ghcr.io/belyazidi56/charts
     chart: demo-helm
     targetRevision: 0.1.0
     helm:

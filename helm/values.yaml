@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/OWNER/demo-helm
+  repository: ghcr.io/belyazidi56/demo-helm
   tag: ""            # set per promotion: the commit's short SHA
   pullPolicy: IfNotPresent
 

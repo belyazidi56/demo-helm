@@ -1,4 +1,4 @@
 replicaCount: 2
 externalSecrets:
   dbUrlKey: demo-helm/prod/DB_URL
-ingressHost: demo-helm.example.test
+ingressHost: demo-helm.169.58.198.97.nip.io

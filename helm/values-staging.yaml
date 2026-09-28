@@ -1,4 +1,4 @@
 replicaCount: 1
 externalSecrets:
   dbUrlKey: demo-helm/staging/DB_URL
-ingressHost: demo-helm.staging.example.test
+ingressHost: demo-helm-staging.169.58.198.97.nip.io

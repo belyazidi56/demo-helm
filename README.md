@@ -11,7 +11,7 @@ syncs the cluster.
 
 `build → test → package-chart → promote-staging → promote-prod`, on pushes to `main`.
 
-- `package-chart` pushes `oci://ghcr.io/OWNER/charts/demo-helm:<chart version>`.
+- `package-chart` pushes `oci://ghcr.io/belyazidi56/charts/demo-helm:<chart version>`.
 - `promote-staging` (environment `staging`) points the `demo-helm-staging` ArgoCD app at the
   new chart and image tag, syncs, and waits for the app to be Healthy.
 - `promote-prod` (environment `prod`) does the same for `demo-helm-prod`. The `prod`
