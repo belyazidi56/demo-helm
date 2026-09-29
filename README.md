@@ -7,15 +7,24 @@ syncs the cluster.
 - `GET /health` → `{ status, version, commit }`
 - `GET /items` → rows from Postgres
 
+## Environments
+
+| Environment | URL | ArgoCD app | Deployed by |
+| --- | --- | --- | --- |
+| staging | `http://demo-helm-staging.169.58.198.97.nip.io` | `demo-helm-staging` | `promote-staging`, on every push to `main` |
+| prod | `http://demo-helm.169.58.198.97.nip.io` | `demo-helm-prod` | `promote-prod`, only when the workflow is run by hand |
+
 ## Pipeline (`.github/workflows/deploy.yml`)
 
-`build → test → package-chart → promote-staging → promote-prod`, on pushes to `main`.
+`build → test → package-chart → promote-staging` on pushes to `main`; `promote-prod` only when
+the workflow is started by hand (`workflow_dispatch`).
 
 - `package-chart` pushes `oci://ghcr.io/belyazidi56/charts/demo-helm:<chart version>`.
 - `promote-staging` (environment `staging`) points the `demo-helm-staging` ArgoCD app at the
   new chart and image tag, syncs, and waits for the app to be Healthy.
-- `promote-prod` (environment `prod`) does the same for `demo-helm-prod`. The `prod`
-  environment is protected: the job waits for an approval before it runs.
+- `promote-prod` (environment `prod`) does the same for `demo-helm-prod`. It runs only on a
+  manual run of the workflow, and the `prod` environment is protected: the job also waits for
+  an approval before it runs.
 
 ## Secrets
 
@@ -24,10 +33,17 @@ syncs the cluster.
   `values-*.yaml` name the keys only.
 - GitHub Actions secrets: `REGISTRY_TOKEN` (GHCR push), `ARGOCD_TOKEN`, and variable `ARGOCD_SERVER`.
 
+## Releasing
+
+Bump `version` in `package.json` (and the two `version` fields at the top of
+`package-lock.json`) and merge to `main`: staging follows. The chart version in
+`helm/Chart.yaml` changes only when the chart itself changes.
+
 ## Checking a deploy
 
 `argocd app get demo-helm-<env>` must show **Synced** and **Healthy**, then
-`curl https://<ingress host>/health` must report the new `version` and `commit`.
+`curl -fsS <environment URL>/health` must report the new `version` and the merge commit's
+short SHA as `commit`.
 
 ## Rollback
 

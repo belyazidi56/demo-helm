@@ -1,4 +1,5 @@
-# demo-helm: build → test → package-chart → promote-staging → promote-prod, on main.
+# demo-helm: build → test → package-chart → promote-staging on main; promote-prod only on a
+# manual run (workflow_dispatch), like demo-compose's manual prod step.
 # Secrets: REGISTRY_TOKEN (GHCR push), ARGOCD_TOKEN. Variables: ARGOCD_SERVER.
 # The staging ArgoCD uses a self-signed certificate; the CLI pins it (argocd/server.crt).
 # The prod environment is protected; promote-prod waits for its approval.
@@ -75,6 +76,7 @@ jobs:
 
   promote-prod:
     needs: [build, promote-staging]
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: prod
     steps:
