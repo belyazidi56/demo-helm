@@ -12,19 +12,20 @@ syncs the cluster.
 | Environment | URL | ArgoCD app | Deployed by |
 | --- | --- | --- | --- |
 | staging | `http://demo-helm-staging.169.58.198.97.nip.io` | `demo-helm-staging` | `promote-staging`, on every push to `main` |
-| prod | `http://demo-helm.169.58.198.97.nip.io` | `demo-helm-prod` | `promote-prod`, only when the workflow is run by hand |
+| prod | `http://demo-helm.169.58.198.97.nip.io` | `demo-helm-prod` | `promote-prod`, only on a manual run with `target=prod` |
 
 ## Pipeline (`.github/workflows/deploy.yml`)
 
-`build → test → package-chart → promote-staging` on pushes to `main`; `promote-prod` only when
-the workflow is started by hand (`workflow_dispatch`).
+`build → test → package-chart → promote-staging` on pushes to `main`. A manual run
+(`workflow_dispatch`) takes an input `target`: `staging` (the default) redeploys staging only;
+`prod` runs staging and then `promote-prod`.
 
 - `package-chart` pushes `oci://ghcr.io/belyazidi56/charts/demo-helm:<chart version>`.
 - `promote-staging` (environment `staging`) points the `demo-helm-staging` ArgoCD app at the
   new chart and image tag, syncs, and waits for the app to be Healthy.
 - `promote-prod` (environment `prod`) does the same for `demo-helm-prod`. It runs only on a
-  manual run of the workflow, and the `prod` environment is protected: the job also waits for
-  an approval before it runs.
+  manual run with `target=prod`, and the `prod` environment is protected: the job also waits
+  for an approval before it runs.
 
 ## Secrets
 
